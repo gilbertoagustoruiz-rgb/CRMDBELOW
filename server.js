@@ -1,0 +1,12 @@
+import express from "express";
+import pg from "pg";
+const app=express(); app.use(express.json()); app.use(express.static("public"));
+const pool=process.env.DATABASE_URL?new pg.Pool({connectionString:process.env.DATABASE_URL,ssl:process.env.NODE_ENV==="production"?{rejectUnauthorized:false}:undefined}):null;
+let demo={clients:[{id:1,name:"Molitalia Perú",contact:"Compras",status:"ACTIVO"}],projects:[{id:1,code:"BT-2026-001",client:"Molitalia Perú",name:"Activación Comercial",stage:"COTIZACIÓN",status:"EN_CURSO",amount:25000}]};
+async function init(){if(!pool)return; await pool.query(`CREATE TABLE IF NOT EXISTS clients(id SERIAL PRIMARY KEY,name TEXT NOT NULL,contact TEXT,status TEXT DEFAULT 'ACTIVO',created_at TIMESTAMPTZ DEFAULT now()); CREATE TABLE IF NOT EXISTS projects(id SERIAL PRIMARY KEY,code TEXT UNIQUE NOT NULL,client TEXT NOT NULL,name TEXT NOT NULL,stage TEXT DEFAULT 'BRIEF',status TEXT DEFAULT 'PENDIENTE',amount NUMERIC DEFAULT 0,created_at TIMESTAMPTZ DEFAULT now());`);}
+app.get("/api/health",(q,s)=>s.json({ok:true,database:!!pool}));
+app.get("/api/clients",async(q,s)=>{try{s.json(pool?(await pool.query("SELECT * FROM clients ORDER BY id DESC")).rows:demo.clients)}catch(e){s.status(500).json({error:e.message})}});
+app.post("/api/clients",async(q,s)=>{const {name,contact,status="ACTIVO"}=q.body;if(!name)return s.status(400).json({error:"Nombre requerido"});if(pool){const r=await pool.query("INSERT INTO clients(name,contact,status) VALUES($1,$2,$3) RETURNING *",[name,contact,status]);return s.status(201).json(r.rows[0])}const x={id:Date.now(),name,contact,status};demo.clients.unshift(x);s.status(201).json(x)});
+app.get("/api/projects",async(q,s)=>{try{s.json(pool?(await pool.query("SELECT * FROM projects ORDER BY id DESC")).rows:demo.projects)}catch(e){s.status(500).json({error:e.message})}});
+app.post("/api/projects",async(q,s)=>{const {code,client,name,stage="BRIEF",status="PENDIENTE",amount=0}=q.body;if(!code||!client||!name)return s.status(400).json({error:"Código, cliente y proyecto son requeridos"});if(pool){const r=await pool.query("INSERT INTO projects(code,client,name,stage,status,amount) VALUES($1,$2,$3,$4,$5,$6) RETURNING *",[code,client,name,stage,status,amount]);return s.status(201).json(r.rows[0])}const x={id:Date.now(),code,client,name,stage,status,amount};demo.projects.unshift(x);s.status(201).json(x)});
+const port=process.env.PORT||3000; init().then(()=>app.listen(port,"0.0.0.0",()=>console.log("CRM Below listo en puerto "+port))).catch(e=>{console.error(e);app.listen(port,"0.0.0.0")});
