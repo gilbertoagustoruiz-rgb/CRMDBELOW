@@ -34,6 +34,13 @@ CREATE TABLE IF NOT EXISTS audit_log(
  id BIGSERIAL PRIMARY KEY, entity TEXT NOT NULL, entity_id TEXT, action TEXT NOT NULL, user_name TEXT DEFAULT 'Sistema',
  payload JSONB, created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS client_id BIGINT REFERENCES clients(id);
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS service_type TEXT;
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS owner TEXT;
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS start_date DATE;
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS end_date DATE;
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS closed_at TIMESTAMPTZ;
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
 CREATE INDEX IF NOT EXISTS idx_projects_client ON projects(client_id);
 CREATE INDEX IF NOT EXISTS idx_project_phases_project ON project_phases(project_id);
 CREATE INDEX IF NOT EXISTS idx_records_module ON operational_records(module);
