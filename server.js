@@ -42,4 +42,14 @@ app.post("/api/sunat/validate",async(q,s)=>{try{const {document_type,issuer_ruc,
 app.get("/api/users",async(q,s)=>{try{ok(s,pool?(await pool.query("SELECT * FROM app_users ORDER BY id DESC")).rows:demo.users)}catch(e){fail(s,e)}});
 app.post("/api/users",async(q,s)=>{try{const {full_name,email,role,area,status="ACTIVO"}=q.body;if(!full_name||!email||!role)return s.status(400).json({error:"Nombre, email y rol requeridos"});if(!pool){const x={id:Date.now(),...q.body};demo.users.unshift(x);return s.status(201).json(x)}const r=await pool.query("INSERT INTO app_users(full_name,email,role,area,status) VALUES($1,$2,$3,$4,$5) RETURNING *",[full_name,email,role,area,status]);await audit("app_users",r.rows[0].id,"CREATE",r.rows[0]);s.status(201).json(r.rows[0])}catch(e){fail(s,e)}});
 app.get("/api/audit",async(q,s)=>{try{ok(s,pool?(await pool.query("SELECT * FROM audit_log ORDER BY id DESC LIMIT 300")).rows:[])}catch(e){fail(s,e)}});
-const port=process.env.PORT||3000;init().then(()=>app.listen(port,"0.0.0.0",()=>console.log("CRM Below listo en puerto "+port))).catch(e=>{console.error("DB init:",e);app.listen(port,"0.0.0.0",()=>console.log("CRM Below iniciado sin DB en puerto "+port))});
+const port=Number(process.env.PORT)||3000;
+let server;
+async function start(){
+  try{await init();}
+  catch(e){console.error("DB init:",e);}
+  server=app.listen(port,"0.0.0.0",()=>console.log("CRM Below listo en puerto "+port));
+  server.on("error",e=>console.error("SERVER ERROR:",e));
+}
+start().catch(e=>{console.error("START ERROR:",e);process.exitCode=1;});
+process.on("SIGTERM",()=>{if(server)server.close(()=>process.exit(0));else process.exit(0)});
+process.on("SIGINT",()=>{if(server)server.close(()=>process.exit(0));else process.exit(0)});
