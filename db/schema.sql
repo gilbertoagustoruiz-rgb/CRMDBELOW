@@ -26,6 +26,14 @@ CREATE TABLE IF NOT EXISTS operational_records(
  responsible TEXT, due_date DATE, details TEXT, metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
  created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+CREATE TABLE IF NOT EXISTS project_documents(
+ id BIGSERIAL PRIMARY KEY, project_id BIGINT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+ module TEXT NOT NULL, document_type TEXT NOT NULL DEFAULT 'DOCUMENTO',
+ original_name TEXT NOT NULL, stored_name TEXT NOT NULL, mime_type TEXT, size_bytes BIGINT,
+ storage_path TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_project_documents_project ON project_documents(project_id);
+CREATE INDEX IF NOT EXISTS idx_project_documents_module ON project_documents(module);
 CREATE TABLE IF NOT EXISTS app_users(
  id BIGSERIAL PRIMARY KEY, full_name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, role TEXT NOT NULL,
  area TEXT, status TEXT NOT NULL DEFAULT 'ACTIVO', created_at TIMESTAMPTZ NOT NULL DEFAULT now()
